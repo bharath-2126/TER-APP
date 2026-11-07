@@ -51,7 +51,7 @@ abstract class CurrencyFormatter {
       formattedMajor = _formatIndianGrouping(majorUnits);
     } else {
       // Western numbering system: 100,000
-      formattedMajor = NumberFormat('#,##0').format(majorUnits);
+      formattedMajor = NumberFormat('#,##0', 'en_US').format(majorUnits);
     }
 
     final decimals = showDecimals ? '.${minorUnits.toString().padLeft(2, '0')}' : '';

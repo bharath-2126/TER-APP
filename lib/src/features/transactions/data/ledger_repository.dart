@@ -195,7 +195,7 @@ class LedgerRepository {
       final cardIdx = _cards.indexWhere((c) => c.id == tx.cardId);
       if (cardIdx != -1) {
         final card = _cards[cardIdx];
-        final newOutstanding = (card.currentOutstandingPaise - tx.amountPaise).clamp(0, card.creditLimitPaise ?? 999999999);
+        final newOutstanding = (card.currentOutstandingPaise - tx.amountPaise).clamp(0, card.creditLimitPaise ?? 999999999).toInt();
         _cards[cardIdx] = card.copyWith(
           currentOutstandingPaise: newOutstanding,
           updatedAt: DateTime.now(),
