@@ -23,8 +23,8 @@ void main() {
 
     test('Formats paise with Western grouping', () {
       expect(
-        CurrencyFormatter.formatPaise(10000000, symbol: '$', locale: CurrencyLocale.usd),
-        '$100,000.00',
+        CurrencyFormatter.formatPaise(10000000, symbol: '\$', locale: CurrencyLocale.usd),
+        '\$100,000.00',
       );
     });
   });
