@@ -16,8 +16,8 @@ void main() {
     });
 
     test('Initial seeded balance calculation is accurate', () {
-      // Seed: HDFC (142850) + ICICI (65200) + Cash (12500) = 220550.00
-      expect(repo.calculateTotalLiquidBalancePaise(), 22055000);
+      // Seed: HDFC (185550) + ICICI (65000) + Cash (15000) = 265550.00 (₹2,65,550.00)
+      expect(repo.calculateTotalLiquidBalancePaise(), 26555000);
     });
 
     test('Logging an expense deducts correctly from bank balance', () async {

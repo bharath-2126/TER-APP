@@ -19,8 +19,8 @@ final accountsStreamProvider = StreamProvider<List<AccountModel>>((ref) {
   return repo.watchAccounts();
 });
 
-/// Total Net Worth / Liquid Balance calculated across all active accounts
-final totalNetWorthProvider = Provider<int>((ref) {
+/// Total Liquid Bank & Cash Balances
+final liquidBankAndCashProvider = Provider<int>((ref) {
   final accountsAsync = ref.watch(accountsStreamProvider);
   return accountsAsync.when(
     data: (accounts) {
@@ -30,9 +30,117 @@ final totalNetWorthProvider = Provider<int>((ref) {
       }
       return total;
     },
-    loading: () => 22055000, // ₹2,20,550.00 initial seed
+    loading: () => 26555000, // ₹2,65,550.00
+    error: (_, __) => 26555000,
+  );
+});
+
+/// Total Credit Cards Outstanding Due
+final creditCardsDueProvider = Provider<int>((ref) {
+  final cardsAsync = ref.watch(cardsStreamProvider);
+  return cardsAsync.when(
+    data: (cards) {
+      int total = 0;
+      for (final c in cards) {
+        if (c.cardType == CardType.credit) {
+          total += c.currentOutstandingPaise;
+        }
+      }
+      return total;
+    },
+    loading: () => 4500000, // ₹45,000.00
+    error: (_, __) => 4500000,
+  );
+});
+
+/// Total Money Lent (Receivables)
+final totalLentReceivablesProvider = Provider<int>((ref) {
+  final debtsAsync = ref.watch(debtsStreamProvider);
+  return debtsAsync.when(
+    data: (debts) {
+      int total = 0;
+      for (final d in debts) {
+        if (d.type == DebtType.lent) {
+          total += d.outstandingBalancePaise;
+        }
+      }
+      return total;
+    },
+    loading: () => 280000, // ₹2,800.00
     error: (_, __) => 0,
   );
+});
+
+/// Total Money Borrowed (Payables)
+final totalBorrowedPayablesProvider = Provider<int>((ref) {
+  final debtsAsync = ref.watch(debtsStreamProvider);
+  return debtsAsync.when(
+    data: (debts) {
+      int total = 0;
+      for (final d in debts) {
+        if (d.type == DebtType.borrowed) {
+          total += d.outstandingBalancePaise;
+        }
+      }
+      return total;
+    },
+    loading: () => 0,
+    error: (_, __) => 0,
+  );
+});
+
+/// Today's Total Expense (Personal share only for split transactions)
+final todayExpensePaiseProvider = Provider<int>((ref) {
+  final txsAsync = ref.watch(transactionsStreamProvider);
+  return txsAsync.when(
+    data: (txs) {
+      final now = DateTime.now();
+      int total = 0;
+      for (final tx in txs) {
+        if ((tx.type == TransactionType.expense || tx.type == TransactionType.splitExpense) &&
+            tx.transactionTimestamp.year == now.year &&
+            tx.transactionTimestamp.month == now.month &&
+            tx.transactionTimestamp.day == now.day) {
+          total += tx.amountPaise;
+        }
+      }
+      return total;
+    },
+    loading: () => 0,
+    error: (_, __) => 0,
+  );
+});
+
+/// Today's Total Income
+final todayIncomePaiseProvider = Provider<int>((ref) {
+  final txsAsync = ref.watch(transactionsStreamProvider);
+  return txsAsync.when(
+    data: (txs) {
+      final now = DateTime.now();
+      int total = 0;
+      for (final tx in txs) {
+        if (tx.type == TransactionType.income &&
+            tx.transactionTimestamp.year == now.year &&
+            tx.transactionTimestamp.month == now.month &&
+            tx.transactionTimestamp.day == now.day) {
+          total += tx.amountPaise;
+        }
+      }
+      return total;
+    },
+    loading: () => 0,
+    error: (_, __) => 0,
+  );
+});
+
+/// Total Net Worth: Assets (Bank & Cash + Money Lent) - Liabilities (Credit Cards Due + Money Borrowed)
+final totalNetWorthProvider = Provider<int>((ref) {
+  final bank = ref.watch(liquidBankAndCashProvider);
+  final lent = ref.watch(totalLentReceivablesProvider);
+  final cards = ref.watch(creditCardsDueProvider);
+  final borrowed = ref.watch(totalBorrowedPayablesProvider);
+
+  return (bank + lent) - (cards + borrowed);
 });
 
 /// Reactive Stream of all user cards (Credit, Debit, Prepaid)

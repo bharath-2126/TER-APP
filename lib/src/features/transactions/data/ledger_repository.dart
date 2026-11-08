@@ -34,8 +34,8 @@ class LedgerRepository {
         id: 'acc_hdfc',
         name: 'HDFC Salary A/c',
         type: AccountType.bank,
-        openingBalancePaise: 14285000, // ₹1,42,850.00
-        currentBalancePaise: 14285000,
+        openingBalancePaise: 18555000, // ₹1,85,550.00
+        currentBalancePaise: 18555000,
         createdAt: now,
         updatedAt: now,
       ),
@@ -43,8 +43,8 @@ class LedgerRepository {
         id: 'acc_icici',
         name: 'ICICI Savings A/c',
         type: AccountType.bank,
-        openingBalancePaise: 6520000, // ₹65,200.00
-        currentBalancePaise: 6520000,
+        openingBalancePaise: 6500000, // ₹65,000.00
+        currentBalancePaise: 6500000,
         createdAt: now,
         updatedAt: now,
       ),
@@ -52,8 +52,8 @@ class LedgerRepository {
         id: 'acc_cash',
         name: 'Cash Wallet',
         type: AccountType.cash,
-        openingBalancePaise: 1250000, // ₹12,500.00
-        currentBalancePaise: 1250000,
+        openingBalancePaise: 1500000, // ₹15,000.00
+        currentBalancePaise: 1500000,
         createdAt: now,
         updatedAt: now,
       ),
@@ -73,6 +73,13 @@ class LedgerRepository {
         phone: '+91 91234 56789',
         outstandingBalancePaise: 250000, // ₹2,500.00
         avatarColor: 'F59E0B',
+      ),
+      PersonModel(
+        id: 'person_vikram',
+        name: 'Vikram Singh',
+        phone: '+91 94567 89012',
+        outstandingBalancePaise: 280000, // ₹2,800.00
+        avatarColor: '8B5CF6',
       ),
     ]);
 
@@ -97,6 +104,16 @@ class LedgerRepository {
         status: DebtStatus.active,
         notes: 'Concert Tickets',
       ),
+      DebtRecord(
+        id: 'debt_prev_vikram',
+        personId: 'person_vikram',
+        type: DebtType.borrowed,
+        principalPaise: 280000,
+        outstandingBalancePaise: 280000,
+        initialDate: now.subtract(const Duration(days: 5)),
+        status: DebtStatus.active,
+        notes: 'Hardware parts advance',
+      ),
     ]);
 
     _cards.addAll([
@@ -107,7 +124,7 @@ class LedgerRepository {
         issuerBank: 'HDFC Bank',
         last4Digits: '8821',
         creditLimitPaise: 50000000, // ₹5,00,000.00
-        currentOutstandingPaise: 3420000, // ₹34,200.00
+        currentOutstandingPaise: 4500000, // ₹45,000.00
         createdAt: now,
         updatedAt: now,
       ),

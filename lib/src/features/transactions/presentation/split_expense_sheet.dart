@@ -731,7 +731,7 @@ class _SplitExpenseSheetState extends ConsumerState<SplitExpenseSheet> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
                   disabledBackgroundColor: Colors.white12,
-                  shape: BorderRadius.circular(16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 6,
                 ),
                 child: const Text(

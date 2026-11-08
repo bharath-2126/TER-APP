@@ -14,6 +14,7 @@ part 'app_database.g.dart';
   Persons,
   Debts,
   DebtRepayments,
+  SplitTransactions,
   Transactions,
   DailyBudgetConfigTable,
   DailyBudgetSnapshots,

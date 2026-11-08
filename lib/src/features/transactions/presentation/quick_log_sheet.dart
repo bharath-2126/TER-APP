@@ -24,17 +24,24 @@ enum QuickPresetType {
 }
 
 class QuickLogSheet extends ConsumerStatefulWidget {
-  const QuickLogSheet({super.key});
+  final QuickPresetType initialPreset;
+  const QuickLogSheet({super.key, this.initialPreset = QuickPresetType.expense});
 
   @override
   ConsumerState<QuickLogSheet> createState() => _QuickLogSheetState();
 }
 
 class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
-  QuickPresetType _selectedPreset = QuickPresetType.expense;
+  late QuickPresetType _selectedPreset;
   String _inputAmount = '0.00';
   int _currentPaise = 0;
   String _note = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPreset = widget.initialPreset;
+  }
 
   void _onDigitPressed(String digit) {
     if (_currentPaise.toString().length >= 8) return;
@@ -283,7 +290,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryBlue,
                 disabledBackgroundColor: Colors.white12,
-                shape: BorderRadius.circular(16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               child: const Text(
                 'Save Transaction (< 2s)',

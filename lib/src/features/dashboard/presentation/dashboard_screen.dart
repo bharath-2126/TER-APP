@@ -5,8 +5,10 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/formatting/currency_formatter.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../transactions/domain/transaction_model.dart';
+import '../../lending/domain/lending_engine.dart';
 import '../../transactions/presentation/quick_log_sheet.dart';
 import '../../transactions/presentation/split_expense_sheet.dart';
+import '../../statements/presentation/statement_generator_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   final VoidCallback? onViewAllPressed;
@@ -36,6 +38,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const QuickLogSheet(),
+    );
+  }
+
+  void _openQuickLogWithPreset(QuickPresetType preset) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => QuickLogSheet(initialPreset: preset),
     );
   }
 
@@ -115,21 +126,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final totalBalancePaise = ref.watch(totalNetWorthProvider);
+    final bankAndCashPaise = ref.watch(liquidBankAndCashProvider);
+    final cardsDuePaise = ref.watch(creditCardsDueProvider);
+    final todayIncomePaise = ref.watch(todayIncomePaiseProvider);
+    final todayExpensePaise = ref.watch(todayExpensePaiseProvider);
     final transactionsAsync = ref.watch(transactionsStreamProvider);
-    final budget = ref.watch(dailyBudgetProvider);
     final isPrivacy = ref.watch(privacyModeProvider);
-    final debtsAsync = ref.watch(debtsStreamProvider);
-
-    // Calculate total money owed to user (Receivables)
-    int totalReceivablesPaise = 0;
-    debtsAsync.whenData((debts) {
-      for (final d in debts) {
-        if (d.type == DebtType.lent) {
-          totalReceivablesPaise += d.outstandingBalancePaise;
-        }
-      }
-    });
-    if (totalReceivablesPaise == 0) totalReceivablesPaise = 950000; // fallback seed ₹9,500
+    final totalReceivablesPaise = ref.watch(totalLentReceivablesProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -145,11 +148,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(height: 16),
 
             // B. TOTAL BALANCE CARD
-            _buildTotalBalanceCard(totalBalancePaise, isPrivacy),
+            _buildTotalBalanceCard(
+              totalBalancePaise: totalBalancePaise,
+              bankAndCashPaise: bankAndCashPaise,
+              cardsDuePaise: cardsDuePaise,
+              todayIncomePaise: todayIncomePaise,
+              todayExpensePaise: todayExpensePaise,
+              isPrivacy: isPrivacy,
+            ),
             const SizedBox(height: 14),
 
             // C. DAILY BUDGET CARD (IMMEDIATELY BELOW TOTAL BALANCE)
-            _buildDailyBudgetCard(budget, isPrivacy),
+            _buildDailyBudgetCard(todayExpensePaise, isPrivacy),
             const SizedBox(height: 18),
 
             // D. 5-CATEGORY FEATURE HUBS
@@ -294,7 +304,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   // ================= B. TOTAL BALANCE CARD =================
-  Widget _buildTotalBalanceCard(int totalBalancePaise, bool isPrivacy) {
+  Widget _buildTotalBalanceCard({
+    required int totalBalancePaise,
+    required int bankAndCashPaise,
+    required int cardsDuePaise,
+    required int todayIncomePaise,
+    required int todayExpensePaise,
+    required bool isPrivacy,
+  }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -364,6 +381,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             style: TextStyle(color: AppColors.textTertiary, fontSize: 11),
           ),
           const Divider(color: Colors.white12, height: 24),
+          // Sub-row 1: Bank & Cash + Cards Due
           Row(
             children: [
               Expanded(
@@ -386,7 +404,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        isPrivacy ? '₹ ••••••' : '₹2,65,550.00',
+                        isPrivacy ? '₹ ••••••' : CurrencyFormatter.formatPaise(bankAndCashPaise),
                         style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
                       ),
                     ],
@@ -414,8 +432,69 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        isPrivacy ? '₹ ••••••' : '-₹45,000.00',
+                        isPrivacy ? '₹ ••••••' : '-${CurrencyFormatter.formatPaise(cardsDuePaise)}',
                         style: const TextStyle(color: AppColors.outflow, fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Sub-row 2: Today's Income + Today's Spending
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A0F1D),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.arrow_upward, size: 10, color: AppColors.inflow),
+                          SizedBox(width: 4),
+                          Text('Today\'s Income', style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isPrivacy ? '₹ ••••••' : '+${CurrencyFormatter.formatPaise(todayIncomePaise)}',
+                        style: const TextStyle(color: AppColors.inflow, fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A0F1D),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.arrow_downward, size: 10, color: AppColors.outflow),
+                          SizedBox(width: 4),
+                          Text('Today\'s Spending', style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isPrivacy ? '₹ ••••••' : '-${CurrencyFormatter.formatPaise(todayExpensePaise)}',
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
                       ),
                     ],
                   ),
@@ -429,11 +508,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   // ================= C. DAILY BUDGET CARD =================
-  Widget _buildDailyBudgetCard(dynamic budget, bool isPrivacy) {
+  Widget _buildDailyBudgetCard(int todaySpentPaise, bool isPrivacy) {
     const dailyLimit = 250000; // ₹2,500.00
-    final spent = budget.spentPaise;
-    final remaining = (dailyLimit - spent).clamp(0, dailyLimit);
-    final progress = (spent / dailyLimit).clamp(0.0, 1.0);
+    final remaining = (dailyLimit - todaySpentPaise).clamp(0, dailyLimit).toInt();
+    final progress = (todaySpentPaise / dailyLimit).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -548,7 +626,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'FINANCIAL HUB & MANAGEMENT',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
               ),
-              Text('5 Modules', style: TextStyle(color: AppColors.primaryBlueGlow, fontSize: 11, fontWeight: FontWeight.bold)),
+              Text('5 Categories', style: TextStyle(color: AppColors.primaryBlueGlow, fontSize: 11, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -560,10 +638,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               child: _buildCategoryCard(
                 title: 'Income',
                 subtitle: '+₹85K/mo',
-                actionLabel: 'Salary, Freelance',
+                actionLabel: 'Add & Trends',
                 icon: Icons.trending_up,
                 accentColor: AppColors.inflow,
-                onTap: _openQuickLog,
+                onTap: () => _openQuickLogWithPreset(QuickPresetType.income),
               ),
             ),
             const SizedBox(width: 8),
@@ -572,10 +650,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               child: _buildCategoryCard(
                 title: 'Spends',
                 subtitle: '₹42.1K/mo',
-                actionLabel: 'Daily Analytics',
+                actionLabel: 'Add & Analytics',
                 icon: Icons.receipt_long,
                 accentColor: AppColors.outflow,
-                onTap: _openQuickLog,
+                onTap: () => _openQuickLogWithPreset(QuickPresetType.expense),
               ),
             ),
           ],
@@ -640,34 +718,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            // 4. Lending & Borrowing
+            // 4. Statement Generation
             Expanded(
               child: _buildCategoryCard(
-                title: 'Lending',
-                subtitle: isPrivacy ? '₹ ••••••' : '₹9.5K Owed',
-                actionLabel: 'Rahul, Priya',
-                icon: Icons.handshake_outlined,
-                accentColor: const Color(0xFFF59E0B),
+                title: 'Statements',
+                subtitle: 'PDF & CSV Export',
+                actionLabel: 'Audit Reports',
+                icon: Icons.description_outlined,
+                accentColor: const Color(0xFF06B6D4),
                 onTap: () {
-                  widget.onNavigateTab?.call(3); // Navigate to Lending tab
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const StatementGeneratorScreen()),
+                  );
                 },
               ),
             ),
             const SizedBox(width: 8),
-            // 5. Accounts & Cards
+            // 5. Lending & Borrowing
             Expanded(
               child: _buildCategoryCard(
-                title: 'Card Vault',
-                subtitle: '8 Accounts',
-                actionLabel: 'HDFC, Zero-Knowledge',
-                icon: Icons.credit_card,
-                accentColor: const Color(0xFF8B5CF6),
+                title: 'Lending',
+                subtitle: isPrivacy ? '₹ ••••••' : CurrencyFormatter.formatPaise(totalReceivablesPaise),
+                actionLabel: 'Rahul, Priya',
+                icon: Icons.handshake_outlined,
+                accentColor: const Color(0xFFF59E0B),
                 onTap: () {
-                  widget.onNavigateTab?.call(3);
+                  widget.onNavigateTab?.call(1); // Navigate to Lending tab
                 },
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+        // 6. Accounts & Cards
+        _buildCategoryCard(
+          title: 'Accounts & Cards Vault',
+          subtitle: 'Bank Accounts, Cash Wallet & Encrypted Cards',
+          actionLabel: 'View Assets & Liabilities',
+          icon: Icons.account_balance_wallet_outlined,
+          accentColor: const Color(0xFF8B5CF6),
+          onTap: () {
+            widget.onNavigateTab?.call(3); // Navigate to Cards tab
+          },
         ),
       ],
     );

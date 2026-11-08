@@ -44,17 +44,17 @@ class CustomBottomNavBar extends StatelessWidget {
                 // 1. Home
                 _buildNavItem(0, Icons.home_filled, 'Home'),
 
-                // 2. Transactions
-                _buildNavItem(1, Icons.history_rounded, 'Ledger'),
+                // 2. Lending
+                _buildNavItem(1, Icons.handshake_outlined, 'Lending'),
 
                 // Spacer for the Center Floating Button
                 const SizedBox(width: 54),
 
-                // 4. Statistics
-                _buildNavItem(2, Icons.bar_chart_rounded, 'Statistics'),
+                // 4. Analytics
+                _buildNavItem(2, Icons.bar_chart_rounded, 'Analytics'),
 
-                // 5. Lending / Profile
-                _buildNavItem(3, Icons.person_rounded, 'Profile'),
+                // 5. Cards & Vault
+                _buildNavItem(3, Icons.credit_card_rounded, 'Cards'),
               ],
             ),
           ),

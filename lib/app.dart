@@ -48,8 +48,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           setState(() => _currentIndex = index);
         },
       ),
-      const StatisticsScreen(),
       const LendingScreen(),
+      const StatisticsScreen(),
       const CardsScreen(),
     ];
 
