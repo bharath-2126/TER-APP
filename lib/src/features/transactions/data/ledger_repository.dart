@@ -144,11 +144,30 @@ class LedgerRepository {
   }
 
   // --- Streams ---
-  Stream<List<TransactionModel>> watchTransactions() => _transactionsStreamController.stream;
-  Stream<List<AccountModel>> watchAccounts() => _accountsStreamController.stream;
-  Stream<List<CardModel>> watchCards() => _cardsStreamController.stream;
-  Stream<List<DebtRecord>> watchDebts() => _debtsStreamController.stream;
-  Stream<List<PersonModel>> watchPersons() => _personsStreamController.stream;
+  Stream<List<TransactionModel>> watchTransactions() async* {
+    yield List.unmodifiable(_transactions);
+    yield* _transactionsStreamController.stream;
+  }
+
+  Stream<List<AccountModel>> watchAccounts() async* {
+    yield List.unmodifiable(_accounts);
+    yield* _accountsStreamController.stream;
+  }
+
+  Stream<List<CardModel>> watchCards() async* {
+    yield List.unmodifiable(_cards);
+    yield* _cardsStreamController.stream;
+  }
+
+  Stream<List<DebtRecord>> watchDebts() async* {
+    yield List.unmodifiable(_debts);
+    yield* _debtsStreamController.stream;
+  }
+
+  Stream<List<PersonModel>> watchPersons() async* {
+    yield List.unmodifiable(_persons);
+    yield* _personsStreamController.stream;
+  }
 
   List<TransactionModel> get transactions => List.unmodifiable(_transactions);
   List<AccountModel> get accounts => List.unmodifiable(_accounts);

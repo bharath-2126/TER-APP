@@ -7,6 +7,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../shared/components/financial_card.dart';
 import '../../../shared/components/segmented_pill_control.dart';
 import '../domain/lending_engine.dart';
+import '../../statements/presentation/person_statement_screen.dart';
 
 class LendingScreen extends ConsumerStatefulWidget {
   const LendingScreen({super.key});
@@ -494,28 +495,65 @@ class _LendingScreenState extends ConsumerState<LendingScreen> {
                         );
                       }),
 
-                      if (!isSettled) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 40,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showRepaymentDialog(
-                              context: context,
-                              personId: person.id,
-                              personName: person.name,
-                              outstandingPaise: person.outstandingBalancePaise,
-                              isLent: true,
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          if (!isSettled) ...[
+                            Expanded(
+                              flex: 3,
+                              child: SizedBox(
+                                height: 38,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _showRepaymentDialog(
+                                    context: context,
+                                    personId: person.id,
+                                    personName: person.name,
+                                    outstandingPaise: person.outstandingBalancePaise,
+                                    isLent: _selectedTabIndex == 0,
+                                  ),
+                                  icon: const Icon(Icons.arrow_downward_rounded, size: 15, color: Colors.white),
+                                  label: Text(
+                                    _selectedTabIndex == 0 ? 'Repayment' : 'Repay',
+                                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primaryBlue,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
                             ),
-                            icon: const Icon(Icons.arrow_downward_rounded, size: 16, color: Colors.white),
-                            label: const Text('Receive Repayment', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryBlue,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            const SizedBox(width: 8),
+                          ],
+                          Expanded(
+                            flex: isSettled ? 1 : 2,
+                            child: SizedBox(
+                              height: 38,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PersonStatementScreen(personId: person.id),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.receipt_long_rounded, size: 15, color: AppColors.primaryBlueGlow),
+                                label: const Text(
+                                  'Statement',
+                                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Colors.white24),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: EdgeInsets.zero,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ],
                   ),
                 );

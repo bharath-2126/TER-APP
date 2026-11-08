@@ -8,7 +8,7 @@ import '../../transactions/domain/transaction_model.dart';
 import '../../lending/domain/lending_engine.dart';
 import '../../transactions/presentation/quick_log_sheet.dart';
 import '../../transactions/presentation/split_expense_sheet.dart';
-import '../../statements/presentation/statement_generator_screen.dart';
+import '../../statements/presentation/statement_dashboard_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   final VoidCallback? onViewAllPressed;
@@ -729,7 +729,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const StatementGeneratorScreen()),
+                    MaterialPageRoute(builder: (context) => const StatementDashboardScreen()),
                   );
                 },
               ),
