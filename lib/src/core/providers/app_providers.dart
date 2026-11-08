@@ -47,10 +47,19 @@ final transactionsStreamProvider = StreamProvider<List<TransactionModel>>((ref) 
   return repo.watchTransactions();
 });
 
+/// Privacy Toggle Provider: masks financial numbers with '₹ ••••••'
+final privacyModeProvider = StateProvider<bool>((ref) => false);
+
 /// Reactive Stream of all active Lending & Borrowing debts
 final debtsStreamProvider = StreamProvider<List<DebtRecord>>((ref) {
   final repo = ref.watch(ledgerRepositoryProvider);
   return repo.watchDebts();
+});
+
+/// Reactive Stream of all persons
+final personsStreamProvider = StreamProvider<List<PersonModel>>((ref) {
+  final repo = ref.watch(ledgerRepositoryProvider);
+  return repo.watchPersons();
 });
 
 /// Daily Budget State Notifier managing daily allocation, expenses, and carry-forward

@@ -11,6 +11,7 @@ class LedgerRepository {
   // In-memory reactive state backing local Drift storage
   final List<AccountModel> _accounts = [];
   final List<CardModel> _cards = [];
+  final List<PersonModel> _persons = [];
   final List<DebtRecord> _debts = [];
   final List<RepaymentRecord> _repayments = [];
   final List<TransactionModel> _transactions = [];
@@ -20,6 +21,7 @@ class LedgerRepository {
   final _accountsStreamController = StreamController<List<AccountModel>>.broadcast();
   final _cardsStreamController = StreamController<List<CardModel>>.broadcast();
   final _debtsStreamController = StreamController<List<DebtRecord>>.broadcast();
+  final _personsStreamController = StreamController<List<PersonModel>>.broadcast();
 
   LedgerRepository() {
     _seedInitialAccountsAndCards();
@@ -57,6 +59,46 @@ class LedgerRepository {
       ),
     ]);
 
+    _persons.addAll([
+      PersonModel(
+        id: 'person_rahul',
+        name: 'Rahul Kumar',
+        phone: '+91 98765 43210',
+        outstandingBalancePaise: 30000, // ₹300.00 initial
+        avatarColor: '10B981',
+      ),
+      PersonModel(
+        id: 'person_priya',
+        name: 'Priya Sharma',
+        phone: '+91 91234 56789',
+        outstandingBalancePaise: 250000, // ₹2,500.00
+        avatarColor: 'F59E0B',
+      ),
+    ]);
+
+    _debts.addAll([
+      DebtRecord(
+        id: 'debt_prev_rahul',
+        personId: 'person_rahul',
+        type: DebtType.lent,
+        principalPaise: 30000,
+        outstandingBalancePaise: 30000,
+        initialDate: now.subtract(const Duration(days: 10)),
+        status: DebtStatus.active,
+        notes: 'Movie Tickets',
+      ),
+      DebtRecord(
+        id: 'debt_prev_priya',
+        personId: 'person_priya',
+        type: DebtType.lent,
+        principalPaise: 250000,
+        outstandingBalancePaise: 250000,
+        initialDate: now.subtract(const Duration(days: 3)),
+        status: DebtStatus.active,
+        notes: 'Concert Tickets',
+      ),
+    ]);
+
     _cards.addAll([
       CardModel(
         id: 'card_regalia',
@@ -89,11 +131,179 @@ class LedgerRepository {
   Stream<List<AccountModel>> watchAccounts() => _accountsStreamController.stream;
   Stream<List<CardModel>> watchCards() => _cardsStreamController.stream;
   Stream<List<DebtRecord>> watchDebts() => _debtsStreamController.stream;
+  Stream<List<PersonModel>> watchPersons() => _personsStreamController.stream;
 
   List<TransactionModel> get transactions => List.unmodifiable(_transactions);
   List<AccountModel> get accounts => List.unmodifiable(_accounts);
   List<CardModel> get cards => List.unmodifiable(_cards);
   List<DebtRecord> get debts => List.unmodifiable(_debts);
+  List<PersonModel> get persons => List.unmodifiable(_persons);
+
+  /// Records a Split Transaction atomically.
+  /// Deducts full bill amount from paying account.
+  /// Records personal share as an expense (only your share affects budget/stats).
+  /// Records friend shares as money lent (receivables) under their profiles.
+  Future<void> recordSplitTransaction({
+    required int totalBillPaise,
+    required int mySharePaise,
+    required String description,
+    required String fromAccountId,
+    String? cardId,
+    String? categoryId,
+    required Map<String, int> participantShares,
+    required DateTime transactionTimestamp,
+  }) async {
+    final splitGroupId = 'split_${DateTime.now().millisecondsSinceEpoch}';
+
+    // 1. Deduct FULL bill amount from account/card
+    _applyExpense(TransactionModel(
+      id: 'tx_bill_deduct',
+      type: TransactionType.expense,
+      amountPaise: totalBillPaise,
+      fromAccountId: fromAccountId,
+      cardId: cardId,
+      transactionTimestamp: transactionTimestamp,
+      createdAt: transactionTimestamp,
+      updatedAt: transactionTimestamp,
+    ));
+
+    // 2. Insert Personal Share as the official Expense transaction
+    final personalTx = TransactionModel(
+      id: 'tx_my_share_${DateTime.now().millisecondsSinceEpoch}',
+      type: TransactionType.splitExpense,
+      amountPaise: mySharePaise,
+      fromAccountId: fromAccountId,
+      cardId: cardId,
+      categoryId: categoryId ?? 'cat_food',
+      splitGroupId: splitGroupId,
+      totalBillPaise: totalBillPaise,
+      note: '$description (Personal share of ₹${totalBillPaise ~/ 100} bill)',
+      transactionTimestamp: transactionTimestamp,
+      createdAt: transactionTimestamp,
+      updatedAt: transactionTimestamp,
+    );
+    _transactions.insert(0, personalTx);
+
+    // Track personal share in daily expenses
+    final epochDay = transactionTimestamp.millisecondsSinceEpoch ~/ 86400000;
+    _dailyExpenses[epochDay] = (_dailyExpenses[epochDay] ?? 0) + mySharePaise;
+
+    // 3. For each participant, create a lending record and update person profile
+    participantShares.forEach((personId, sharePaise) {
+      if (sharePaise <= 0) return;
+
+      final pIdx = _persons.indexWhere((p) => p.id == personId);
+      String personName = 'Friend';
+      if (pIdx != -1) {
+        personName = _persons[pIdx].name;
+        _persons[pIdx] = _persons[pIdx].copyWith(
+          outstandingBalancePaise: _persons[pIdx].outstandingBalancePaise + sharePaise,
+        );
+      } else {
+        _persons.add(PersonModel(
+          id: personId,
+          name: personName,
+          outstandingBalancePaise: sharePaise,
+        ));
+      }
+
+      final debt = DebtRecord(
+        id: 'debt_${DateTime.now().millisecondsSinceEpoch}_$personId',
+        personId: personId,
+        type: DebtType.lent,
+        principalPaise: sharePaise,
+        outstandingBalancePaise: sharePaise,
+        initialDate: transactionTimestamp,
+        status: DebtStatus.active,
+        notes: 'Split Bill: $description (Total ₹${totalBillPaise ~/ 100})',
+        splitGroupId: splitGroupId,
+      );
+      _debts.insert(0, debt);
+
+      _transactions.insert(1, TransactionModel(
+        id: 'tx_lent_${DateTime.now().millisecondsSinceEpoch}_$personId',
+        type: TransactionType.debtLend,
+        amountPaise: sharePaise,
+        personId: personId,
+        splitGroupId: splitGroupId,
+        note: 'Lent to $personName via split ($description)',
+        transactionTimestamp: transactionTimestamp,
+        createdAt: transactionTimestamp,
+        updatedAt: transactionTimestamp,
+      ));
+    });
+
+    _notifyAll();
+  }
+
+  /// Records partial or full repayment from a borrower (e.g. Rahul returning ₹300)
+  Future<void> recordLendingRepayment({
+    required String personId,
+    required int amountPaise,
+    required String toAccountId,
+    String? notes,
+  }) async {
+    final now = DateTime.now();
+
+    // 1. Inflow money into receiving account
+    final toIdx = _accounts.indexWhere((a) => a.id == toAccountId);
+    if (toIdx != -1) {
+      _accounts[toIdx] = _accounts[toIdx].copyWith(
+        currentBalancePaise: _accounts[toIdx].currentBalancePaise + amountPaise,
+        updatedAt: now,
+      );
+    }
+
+    // 2. Reduce person's outstanding balance
+    final pIdx = _persons.indexWhere((p) => p.id == personId);
+    if (pIdx != -1) {
+      _persons[pIdx] = _persons[pIdx].copyWith(
+        outstandingBalancePaise: (_persons[pIdx].outstandingBalancePaise - amountPaise).clamp(0, 999999999).toInt(),
+      );
+    }
+
+    // 3. Update debt record(s)
+    int remainingToCredit = amountPaise;
+    for (int i = 0; i < _debts.length; i++) {
+      if (_debts[i].personId == personId && _debts[i].outstandingBalancePaise > 0) {
+        final deduct = remainingToCredit <= _debts[i].outstandingBalancePaise
+            ? remainingToCredit
+            : _debts[i].outstandingBalancePaise;
+        
+        final result = LendingEngine.applyRepayment(
+          debt: _debts[i],
+          repaymentId: 'rep_${DateTime.now().millisecondsSinceEpoch}',
+          repaymentAmountPaise: deduct,
+          repaymentDate: now,
+          notes: notes,
+        );
+
+        _debts[i] = _debts[i].copyWithOutstanding(
+          newOutstanding: result.newOutstandingPaise,
+          newStatus: result.newStatus,
+        );
+        _repayments.add(result.repayment);
+
+        remainingToCredit -= deduct;
+        if (remainingToCredit <= 0) break;
+      }
+    }
+
+    // 4. Log transaction
+    _transactions.insert(0, TransactionModel(
+      id: 'tx_rep_${DateTime.now().millisecondsSinceEpoch}',
+      type: TransactionType.debtRepayment,
+      amountPaise: amountPaise,
+      toAccountId: toAccountId,
+      personId: personId,
+      note: notes ?? 'Repayment received',
+      transactionTimestamp: now,
+      createdAt: now,
+      updatedAt: now,
+    ));
+
+    _notifyAll();
+  }
 
   /// Computes aggregate Liquid Cash Net Worth
   int calculateTotalLiquidBalancePaise() {
@@ -108,6 +318,7 @@ class LedgerRepository {
   Future<void> logTransaction(TransactionModel tx) async {
     switch (tx.type) {
       case TransactionType.expense:
+      case TransactionType.splitExpense:
         _applyExpense(tx);
         break;
       case TransactionType.income:
@@ -129,7 +340,7 @@ class LedgerRepository {
     _transactions.insert(0, tx);
 
     // Track daily budget expense if not excluded
-    if (tx.type == TransactionType.expense && !tx.isExcludedFromBudget) {
+    if ((tx.type == TransactionType.expense || tx.type == TransactionType.splitExpense) && !tx.isExcludedFromBudget) {
       final epochDay = tx.transactionTimestamp.millisecondsSinceEpoch ~/ 86400000;
       _dailyExpenses[epochDay] = (_dailyExpenses[epochDay] ?? 0) + tx.amountPaise;
     }
@@ -233,6 +444,7 @@ class LedgerRepository {
     _accountsStreamController.add(List.unmodifiable(_accounts));
     _cardsStreamController.add(List.unmodifiable(_cards));
     _debtsStreamController.add(List.unmodifiable(_debts));
+    _personsStreamController.add(List.unmodifiable(_persons));
   }
 
   void dispose() {
@@ -240,5 +452,6 @@ class LedgerRepository {
     _accountsStreamController.close();
     _cardsStreamController.close();
     _debtsStreamController.close();
+    _personsStreamController.close();
   }
 }

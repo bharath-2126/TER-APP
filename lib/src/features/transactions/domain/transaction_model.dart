@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 enum TransactionType {
   income,
   expense,
+  splitExpense,
   transfer,
   debtLend,
   debtBorrow,
@@ -20,6 +21,8 @@ class TransactionModel {
   final String? cardId;
   final String? categoryId;
   final String? personId;
+  final String? splitGroupId;
+  final int? totalBillPaise;
   final DateTime transactionTimestamp;
   final String? note;
   final bool isExcludedFromBudget;
@@ -36,6 +39,8 @@ class TransactionModel {
     this.cardId,
     this.categoryId,
     this.personId,
+    this.splitGroupId,
+    this.totalBillPaise,
     required this.transactionTimestamp,
     this.note,
     this.isExcludedFromBudget = false,

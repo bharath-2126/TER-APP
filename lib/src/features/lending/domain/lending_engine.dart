@@ -12,6 +12,39 @@ enum DebtStatus {
 }
 
 @immutable
+class PersonModel {
+  final String id;
+  final String name;
+  final String? phone;
+  final int outstandingBalancePaise; // Positive = they owe user (Receivable)
+  final String avatarColor;
+
+  const PersonModel({
+    required this.id,
+    required this.name,
+    this.phone,
+    required this.outstandingBalancePaise,
+    this.avatarColor = '2563EB',
+  });
+
+  PersonModel copyWith({
+    String? id,
+    String? name,
+    String? phone,
+    int? outstandingBalancePaise,
+    String? avatarColor,
+  }) {
+    return PersonModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      outstandingBalancePaise: outstandingBalancePaise ?? this.outstandingBalancePaise,
+      avatarColor: avatarColor ?? this.avatarColor,
+    );
+  }
+}
+
+@immutable
 class DebtRecord {
   final String id;
   final String personId;
@@ -22,6 +55,7 @@ class DebtRecord {
   final DateTime? dueDate;
   final DebtStatus status;
   final String? notes;
+  final String? splitGroupId;
 
   const DebtRecord({
     required this.id,
@@ -33,10 +67,29 @@ class DebtRecord {
     this.dueDate,
     required this.status,
     this.notes,
+    this.splitGroupId,
   });
 
   /// Invariant check: Outstanding balance must never exceed principal
   bool get isValid => outstandingBalancePaise >= 0 && outstandingBalancePaise <= principalPaise;
+
+  DebtRecord copyWithOutstanding({
+    required int newOutstanding,
+    required DebtStatus newStatus,
+  }) {
+    return DebtRecord(
+      id: id,
+      personId: personId,
+      type: type,
+      principalPaise: principalPaise,
+      outstandingBalancePaise: newOutstanding,
+      initialDate: initialDate,
+      dueDate: dueDate,
+      status: newStatus,
+      notes: notes,
+      splitGroupId: splitGroupId,
+    );
+  }
 }
 
 @immutable

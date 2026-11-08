@@ -106,16 +106,9 @@ class _LendingScreenState extends State<LendingScreen> {
                   );
                   setState(() {
                     final index = _debts.indexOf(debt);
-                    _debts[index] = DebtRecord(
-                      id: debt.id,
-                      personId: debt.personId,
-                      type: debt.type,
-                      principalPaise: debt.principalPaise, // Original principal is IMMUTABLE!
-                      outstandingBalancePaise: result.newOutstandingPaise,
-                      initialDate: debt.initialDate,
-                      dueDate: debt.dueDate,
-                      status: result.newStatus,
-                      notes: debt.notes,
+                    _debts[index] = debt.copyWithOutstanding(
+                      newOutstanding: result.newOutstandingPaise,
+                      newStatus: result.newStatus,
                     );
                   });
                   Navigator.pop(context);
